@@ -71,3 +71,79 @@
 - 创作了 `int1024_t`。
 - 增加了一些基础运算。
 - 实现了位运算（与、或、异或、取反）及流输入输出（`<<` / `>>`）。
+
+---
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/).
+
+## [0.4.0] - 2026-10-14 (Current)
+
+### Added
+- Added the `gcd()` function, supporting greatest common divisor computation for big numbers.
+- Added the `pow_mod()` function, implementing big number modular exponentiation based on fast exponentiation.
+- Added the `isqrt()` function, implementing integer square root based on Newton's iteration method.
+- Added a lightweight testing framework (replacing plain `assert`), supporting PASS/FAIL statistics and returning a non-zero exit code on failure.
+- Added an in-place optimization for `operator+=`, reducing temporary object copies during big number addition.
+
+### Changed
+- **Engineering refactor**: Removed `<bits/stdc++.h>` and `using namespace std;`, switched to standard headers and explicitly used the `std::` prefix to avoid polluting the user's namespace.
+- Renamed the global square root function `sqrt` to `isqrt` to avoid ambiguity conflicts with `std::sqrt` in `<cmath>`.
+- Refactored the single-file build into a standard header/source file separation structure (*if split into .hpp/.cpp*).
+
+### Fixed
+- Fixed a potential silent truncation and infinite loop issue in the `fact()` function when passed a big number exceeding the `long long` range; it now throws `std::overflow_error`.
+- Added out-of-bounds assertions (`assert`) in the carry loops of `add_at` and `mag_sqr_into`, improving safety in Debug mode.
+
+### Removed
+- Removed unnecessary dead code (non-publicly-exposed fixed-width bitwise operation helper functions).
+
+---
+
+## [0.3.0] - 2026-10-14
+
+### Added
+- Added a dedicated `sqr()` interface to optimize big number squaring performance.
+- Added the core fast exponentiation implementation of `pow()`.
+
+### Changed
+- **Syntactic sugar removal**: Deprecated and removed custom literals/operator overloads such as `_p` and `pow_tag`, which easily caused C++ operator precedence pitfalls and compilation errors, and switched to the standard `pow(base, exp)` function call form.
+
+### Fixed
+- Fixed a data self-destruction issue in `mag_add` caused by `assign` when the target and source are at the same address (aliasing) (switched to using a temporary variable as an intermediary).
+- Fixed a fatal UB issue where the `Scratch` memory pool used `std::vector` as its underlying container, and reallocation caused outer references to dangle (dangling reference); switched to `std::deque`.
+- Fixed a serious bug in `to_string()` where `10^19` was cast to `long long`, causing wraparound and thereby making big number decimal output entirely incorrect.
+
+---
+
+## [0.2.0] - Historical version
+
+### Added
+- Introduced C++20 `std::span` to implement zero-copy view splitting during Karatsuba multiplication.
+- Introduced the `Scratch` temporary memory pool to reduce dynamic memory allocation overhead in deeply recursive multiplication.
+- Implemented an O(n²) multiplication kernel optimized with a 4-way accumulator, improving instruction-level parallelism (ILP).
+- Supported parsing of base-prefixed strings with `0x` and `0o`.
+
+### Changed
+- Multiplication strategy is divided into four-level dispatch: single-limb fast path, direct multiplication for short operands, O(n²) 4-way accumulation, and Karatsuba.
+- Optimized `from_dec_str` by converting decimal digits in batches of 19 at a time, greatly reducing the number of divisions.
+
+---
+
+## [0.1.0] - Initial prototype
+
+### Added
+- Refactored from fixed-width `int1024_t` to arbitrary-precision `bigint`.
+- Adopted sign-magnitude representation, with `std::vector<uint64_t>` as the underlying storage.
+- Implemented complete basic four arithmetic operations (addition, subtraction, multiplication, division) and modulo operation.
+- Implemented big number division/modulo based on Knuth Algorithm D.
+- Supported negative numbers and arithmetic right shift (sign-bit extension) semantics.
+
+---
+
+## [0.0.0] - Beginning
+
+### Creation
+- Created `int1024_t`.
+- Added some basic operations.
+- Implemented bitwise operations (AND, OR, XOR, NOT) and stream input/output (`<<` / `>>`).
