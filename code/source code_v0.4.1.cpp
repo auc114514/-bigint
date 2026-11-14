@@ -615,4 +615,156 @@ bigint bigint::operator>>(size_t k) const {
     if (!neg) { bigint r = *this; mag_shr(r.mag, k); return r; }
     bigint t = -(*this);
     t = t - bigint(1);
-    mag_shr(t.mag, k
+    mag_shr(t.mag, k);
+    return -(t + bigint(1));
+}
+
+bigint bigint::operator&(const bigint& o) const {
+    size_t W = std::max(mag.size(), o.mag.size()) + 1;
+    mag_t a = to_twos(*this, W), b = to_twos(o, W);
+    for (size_t i = 0; i < W; ++i) a[i] &= b[i];
+    return from_twos(std::move(a));
+}
+bigint bigint::operator|(const bigint& o) const {
+    size_t W = std::max(mag.size(), o.mag.size()) + 1;
+    mag_t a = to_twos(*this, W), b = to_twos(o, W);
+    for (size_t i = 0; i < W; ++i) a[i] |= b[i];
+    return from_twos(std::move(a));
+}
+bigint bigint::operator^(const bigint& o) const {
+    size_t W = std::max(mag.size(), o.mag.size()) + 1;
+    mag_t a = to_twos(*this, W), b = to_twos(o, W);
+    for (size_t i = 0; i < W; ++i) a[i] ^= b[i];
+    return from_twos(std::move(a));
+}
+
+bigint& bigint::operator+=(const bigint& o) {
+    if (neg == o.neg) {
+        mag_add(mag, o.mag);
+    } else {
+        if (mag_lt(mag, o.mag)) {
+            mag_t tmp = o.mag;
+            mag_sub(tmp, mag);
+            mag = std::move(tmp);
+            neg = o.neg;
+        } else {
+            mag_sub(mag, o.mag);
+        }
+    }
+    normalize();
+    return *this;
+}
+bigint& bigint::operator-=(const bigint& o){ *this += (-o); return *this; }
+bigint& bigint::operator*=(const bigint& o){ *this = *this * o; return *this; }
+bigint& bigint::operator/=(const bigint& o){ *this = *this / o; return *this; }
+bigint& bigint::operator%=(const bigint& o){ *this = *this % o; return *this; }
+bigint& bigint::operator&=(const bigint& o){ *this = *this & o; return *this; }
+bigint& bigint::operator|=(const bigint& o){ *this = *this | o; return *this; }
+bigint& bigint::operator^=(const bigint& o){ *this = *this ^ o; return *this; }
+bigint& bigint::operator<<=(size_t k){ *this = *this << k; return *this; }
+bigint& bigint::operator>>=(size_t k){ *this = *this >> k; return *this; }
+
+bigint& bigint::operator++(){ *this += bigint(1); return *this; }
+bigint  bigint::operator++(int){ bigint t=*this; ++(*this); return t; }
+bigint& bigint::operator--(){ *this -= bigint(1); return *this; }
+bigint  bigint::operator--(int){ bigint t=*this; --(*this); return t; }
+
+bool bigint::operator==(const bigint& o) const { return neg == o.neg && mag == o.mag; }
+bool bigint::operator!=(const bigint& o) const { return !(*this == o); }
+bool bigint::operator<(const bigint& o) const {
+    if (neg != o.neg) return neg;
+    if (neg) return mag_lt(o.mag, mag);
+    return mag_lt(mag, o.mag);
+}
+bool bigint::operator<=(const bigint& o) const { return !(o < *this); }
+bool bigint::operator>(const bigint& o) const { return o < *this; }
+bool bigint::operator>=(const bigint& o) const { return !(*this < o); }
+
+bool bigint::fits_ll() const {
+    if (mag.size() > 1) return false;
+    if (mag.empty()) return true;
+    limb_t v = mag[0];
+    if (!neg) return v < (limb_t(1) << 63);
+    return v <= (limb_t(1) << 63);
+}
+long long bigint::to_ll() const {
+    assert(fits_ll() && "bigint: to_ll truncates");
+    limb_t v = mag.empty() ? 0 : mag[0];
+    return neg ? (long long)(limb_t(0) - v) : (long long)v;
+}
+
+std::string bigint::to_string() const {
+    if (is_zero()) return "0";
+    bigint t = *this; t.neg = false;
+    bigint base = from_limb(BASE10_19);
+    std::vector<limb_t> chunks;
+    while (!t.is_zero()) {
+        bigint q, r;
+        divmod(t, base, q, r);
+        chunks.push_back(r.mag.empty() ? 0 : r.mag[0]);
+        t = std::move(q);
+    }
+    std::string out = std::to_string(chunks.back());
+    for (size_t i = chunks.size() - 1; i-- > 0;) {
+        char buf[32];
+        std::snprintf(buf, sizeof(buf), "%019llu",
+                      static_cast<unsigned long long>(chunks[i]));
+        out += buf;
+    }
+    return neg ? "-" + out : out;
+}
+
+std::string bigint::to_hex() const {
+    if (is_zero()) return "0";
+    char buf[17];
+    std::string s;
+    for (size_t i = mag.size(); i-- > 0;) {
+        std::snprintf(buf, sizeof(buf), "%016llx",
+                      static_cast<unsigned long long>(mag[i]));
+        s += buf;
+    }
+    size_t pos = s.find_first_not_of('0');
+    std::string h = (pos == std::string::npos) ? "0" : s.substr(pos);
+    return neg ? "-" + h : h;
+}
+
+// ============================================================
+//  数学函数扩展实现
+// ============================================================
+
+bigint pow(const bigint& base, const bigint& exp) { return base.pow(exp); }
+bigint fact(const bigint& n) { return n.fact(); }
+
+bigint isqrt(const bigint& n) {
+    if (n < bigint(0)) throw std::domain_error("bigint: isqrt of negative number");
+    if (n.is_zero()) return bigint(0);
+    bigint x = n, y = (x + bigint(1)) >> 1;
+    while (y < x) {
+        x = y;
+        y = (x + n / x) >> 1;
+    }
+    return x;
+}
+
+bigint gcd(const bigint& a, const bigint& b) {
+    if (b.is_zero()) return a < 0 ? -a : a;
+    bigint x = a, y = b;
+    while (!y.is_zero()) {
+        bigint r = x % y;
+        x = std::move(y);
+        y = std::move(r);
+    }
+    return x.neg ? -x : x;
+}
+
+bigint pow_mod(bigint base, bigint exp, const bigint& mod) {
+    if (mod.is_zero()) throw std::domain_error("bigint: mod by zero");
+    bigint res = 1 % mod;
+    base = base % mod;
+    while (!exp.is_zero()) {
+        if (exp.is_odd()) res = (res * base) % mod;
+        base = (base * base) % mod;
+        exp >>= 1;
+    }
+    return res;
+}
