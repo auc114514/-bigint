@@ -6,6 +6,7 @@
 #include <string>
 #include <span>
 #include <cstdint>
+#include <deque>
 
 class bigint {
 public:
@@ -21,6 +22,14 @@ private:
     bool  neg{false};
     mag_t mag;
 
+    struct Scratch {
+        std::deque<mag_t> bufs;
+        size_t top = 0;
+        explicit Scratch(size_t reserve = 16);
+        mag_t& get();
+        void release(size_t n);
+    };
+
     void normalize();
     static view_t trimmed(view_t v);
     static bool mag_lt(view_t a, view_t b);
@@ -32,7 +41,7 @@ private:
     static void mag_mul_limb_into(view_t a, limb_t b, mag_t& out);
     static void mag_mul_into_4way(view_t a, view_t b, mag_t& out);
     static void add_at(mag_t& out, const mag_t& z, size_t off);
-    static void mag_mul_karatsuba_v(view_t a, view_t b, mag_t& out, struct Scratch& sc);
+    static void mag_mul_karatsuba_v(view_t a, view_t b, mag_t& out, Scratch& sc);
     static void mag_sqr_into(view_t a, mag_t& out);
     static void mag_shl(mag_t& a, size_t k);
     static void mag_shr(mag_t& a, size_t k);
@@ -40,6 +49,7 @@ private:
     static mag_t to_twos(const bigint& x, size_t W);
     static bigint from_twos(mag_t m);
     static bigint from_dec_str(const std::string& s);
+    static bigint from_limb(limb_t v);
 
 public:
     bigint() = default;
@@ -67,7 +77,7 @@ public:
     bigint operator*(const bigint& o) const;
     bigint operator/(const bigint& o) const;
     bigint operator%(const bigint& o) const;
-    
+
     bigint sqr() const;
     bigint pow(const bigint& exp) const;
     bigint fact() const;
@@ -109,11 +119,11 @@ public:
     std::string to_hex() const;
 };
 
-// 数学函数扩展
-inline bigint pow(const bigint& base, const bigint& exp) { return base.pow(exp); }
-inline bigint fact(const bigint& n) { return n.fact(); }
-inline bigint isqrt(const bigint& n);
-inline bigint gcd(const bigint& a, const bigint& b);
-inline bigint pow_mod(bigint base, bigint exp, const bigint& mod);
+// 数学函数扩展（接口声明）
+bigint pow(const bigint& base, const bigint& exp);
+bigint fact(const bigint& n);
+bigint isqrt(const bigint& n);
+bigint gcd(const bigint& a, const bigint& b);
+bigint pow_mod(bigint base, bigint exp, const bigint& mod);
 
 #endif // BIGINT_HPP
