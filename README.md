@@ -1,5 +1,27 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 并且本项目遵循 [语义化版本 (Semantic Versioning)](https://semver.org/lang/zh-CN/)。
+## [2.0.0] - 2026-11-27 (Current)
+
+### 新增 (Added)
+- **三级乘法引擎**：实现了根据 limb 数自动分派的三级乘法策略，包括基础乘法 O(N²)、Karatsuba (O(N^1.58)) 以及基于 8-bit 拆分的 NTT 乘法 (O(N log N))。
+- **工业级数论工具箱**：
+  - 新增 `is_prime()`：基于 12 个固定底数的 Miller-Rabin 素性测试，精准覆盖 `3.3×10^24` 范围。
+  - 新增 `factorize()`：基于 Pollard's Rho 与递归算法的质因数分解。
+  - 新增 `mod_inverse()`：基于扩展欧几里得算法的模逆元求解。
+  - 新增 `pow_mod()` / `mul_mod()`：快速幂取模底层支持。
+- **底层原语**：新增 `U128` 结构体与 `mul64x64`、`udiv128`，在支持 `__int128` 的平台上自动开启 128 位硬件加速，在 MSVC 上自动降级为纯 64 位拆分。
+- **十六进制输出**：新增 O(N) 复杂度的 `to_hex()` 直接遍历底层 limb 输出，避免除法带来的性能损耗。
+
+### 变更 (Changed)
+- **架构重构**：将原先的定宽模板库（`bigint<Bits>`）与不定宽动态库（`dynamic_bigint`）分离，统一由 `dynamic_bigint` 承担主要的任意精度运算职责，彻底解除栈空间限制。
+- 乘法策略分派更新为：`limbs < 32` 走 `base_mul`，`limbs < 512` 走 `karatsuba_mul`，`limbs >= 512` 走 `ntt_multiply`。
+- `to_string()` 十进制转换继续采用 10^19 分块除法，并优化了最高位的前导零处理逻辑。
+
+### 修复 (Fixed)
+- 修复了 `ntt_multiply` 在重组卷积结果时的 `& 0xFF` 截断 Bug，确保超大数据乘法结果完全正确。
+- 修复了 `karatsuba_mul` 的 `scratch` 内存分配不足问题（提升至 `n * 8`），防止越界。
+- 修复了 `operator<<` 缺失导致左移编译报错的问题。
+- 修复了 `to_hex` 负数和零值输出时的前导零与符号 Bug。
 ## [0.4.1] - 2026-10-14
 
 ### 修复 (Fixed)
@@ -10,7 +32,7 @@
 ### 变更 (Changed)
 - 优化了测试用例结构：新增了独立编译的 `test_bigint.cpp`，以确保在 CI 环境下能够正确分离编译和链接，验证库的真实可用性。
 
-## [0.4.0] - 2026-10-14 (Current)
+## [0.4.0] - 2026-11-14 (Current)
 
 ### 新增 (Added)
 - 新增 `gcd()` 函数，支持大数最大公约数计算。
@@ -33,7 +55,7 @@
 
 ---
 
-## [0.3.0] - 2026-10-14
+## [0.3.0] - 2026-11-14
 
 ### 新增 (Added)
 - 添加 `sqr()` 专用接口，优化大数平方计算性能。
@@ -85,6 +107,28 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
+## [2.0.0] - 2026-11-XX (Current)
+
+### Added
+- **Three-tier multiplication engine**: Implemented a three-tier multiplication strategy that automatically dispatches based on the number of limbs, including basic multiplication O(N²), Karatsuba (O(N^1.58)), and NTT multiplication based on 8-bit splitting (O(N log N)).
+- **Industrial-grade number theory toolbox**:
+  - Added `is_prime()`: Miller-Rabin primality test based on 12 fixed bases, accurately covering the range up to `3.3×10^24`.
+  - Added `factorize()`: Prime factorization based on Pollard's Rho and recursion.
+  - Added `mod_inverse()`: Modular inverse computation based on the extended Euclidean algorithm.
+  - Added `pow_mod()` / `mul_mod()`: Underlying support for fast modular exponentiation.
+- **Low-level primitives**: Added the `U128` struct and `mul64x64`, `udiv128`, automatically enabling 128-bit hardware acceleration on platforms that support `__int128`, and automatically falling back to pure 64-bit splitting on MSVC.
+- **Hexadecimal output**: Added `to_hex()` with O(N) complexity, directly traversing the underlying limbs for output, avoiding the performance overhead caused by division.
+
+### Changed
+- **Architecture refactor**: Separated the former fixed-width template library (`bigint<Bits>`) from the dynamic arbitrary-precision library (`dynamic_bigint`), with `dynamic_bigint` now uniformly handling the main arbitrary-precision computation responsibilities, completely removing stack space limitations.
+- Updated multiplication strategy dispatch to: `limbs < 32` uses `base_mul`, `limbs < 512` uses `karatsuba_mul`, `limbs >= 512` uses `ntt_multiply`.
+- `to_string()` decimal conversion continues to use 10^19 block division, and optimized the leading-zero handling logic for the highest digits.
+
+### Fixed
+- Fixed the `& 0xFF` truncation bug in `ntt_multiply` when reassembling convolution results, ensuring that multiplication results for extremely large data are completely correct.
+- Fixed the insufficient `scratch` memory allocation issue in `karatsuba_mul` (increased to `n * 8`) to prevent out-of-bounds access.
+- Fixed the left-shift compilation error caused by the missing `operator<<`.
+- Fixed leading-zero and sign bugs in `to_hex` when outputting negative numbers and zero.
 ## [0.4.1] - 2026-10-14
 
 ### Fixed
